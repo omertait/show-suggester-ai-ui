@@ -22,25 +22,28 @@ def reset_session():
 def prompt_liked_shows():
     session['state_manager_state'] = 1
     session['state_manager_data'] = None
-    logging.error(f"current state: {session['state_manager_state']}")
+    logging.debug(f"current state: {session['state_manager_state']}")
     return jsonify({'message': get_liked_shows_message_for_client})
 
     
 @app.route('/api/message', methods=['POST'])
 def handle_message():
     user_input = request.json['message']
-    
+    logging.debug(f"input: {user_input}")
+
     # Load the current state from the session
     state_data = session.get('state_manager_data', None)
     current_state = session.get('state_manager_state', 1)
-    state_manager = StateManager(current_state, state_data)
-    logging.error(f"current state: {current_state}")
-    reply = state_manager.get_response(user_input)
 
+    # initialize the state manager with the current state and saved data
+    state_manager = StateManager(current_state, state_data)
+    logging.debug(f"current state: {current_state}")
+    reply = state_manager.get_response(user_input)
+    logging.debug(f"reply: {reply}")
     # Save the updated state back to the session
     session['state_manager_state'] = state_manager.current_state
     session['state_manager_data'] = state_manager.liked_shows
-    logging.error(f"updated state: {state_manager.current_state}")
+    logging.debug(f"updated state: {state_manager.current_state}")
 
 
     return jsonify({'reply': reply})

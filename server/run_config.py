@@ -4,8 +4,8 @@ def approve_liked_shows_message_for_client(shows_titles):
     return f"Just to make sure, do you mean {','.join(shows_titles)}?(y/n)"
 
 not_approved_message_for_client = "Sorry about that. Lets try again, please make sure to write the names of the tv shows correctly."
-approved_message_for_client = "Great! I'll find you some shows you'll love."
-
+# approved_message_for_client = "Great! I'll find you some shows you'll love."
+finished_message_for_client = ["Thank you for using our service. Hope you enjoyed it!", "refresh to start over."]
 
 def output_messages(suggestions, new_shows):
     messages = []
