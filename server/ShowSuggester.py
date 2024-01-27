@@ -9,7 +9,6 @@ from fuzzywuzzy import process as fuzzy
 from PIL import Image
 import requests
 
-from dotenv import load_dotenv
 
 logging.basicConfig(level= logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s', filename='logs.log')
 logger = logging.getLogger(__name__)
@@ -148,17 +147,18 @@ def create_new_shows_posters(client, new_shows, model="dall-e-2"):
         
     return new_shows
 ############## new function ##############
-def get_vectors_dict():
+def get_vectors_dict(pickele_path):
     try:
-        # if not os.path.exists(os.environ.get("PICKELE_PATH")):
-        #     logger.error("pkl not found, generating embeddings")
-        #     client = init_openAI_client(os.environ.get("OPENAI_API_KEY"))
-        #     embedding_model = os.environ.get("MODEL_EMBEDDING")
-        #     shows_df = csv_to_df(os.environ.get("SHOWS_CSV_PATH"), ["Title", "Description"])
-        #     vectors_dict = generate_vectors(client, embedding_model, shows_df)
-        #     pickle_save(vectors_dict, os.environ.get("PICKELE_PATH"))
-        # else:
-        vectors_dict = pickle_load("server/vectors_dict.pkl")
+        if not os.path.exists(os.environ.get("PICKELE_PATH")):
+            logger.error("pkl not found, generating embeddings")
+            raise Exception("pkl not found, generating embeddings")
+            client = init_openAI_client(os.environ.get("OPENAI_API_KEY"))
+            embedding_model = os.environ.get("MODEL_EMBEDDING")
+            shows_df = csv_to_df(os.environ.get("SHOWS_CSV_PATH"), ["Title", "Description"])
+            vectors_dict = generate_vectors(client, embedding_model, shows_df)
+            pickle_save(vectors_dict, os.environ.get("PICKELE_PATH"))
+        else:
+            vectors_dict = pickle_load(pickele_path)
         return vectors_dict
     except Exception as e:
         raise e
@@ -170,9 +170,9 @@ def get_title_choices(vectors_dict):
     except Exception as e:
         raise e
 ############## new function ##############
-def main_func(liked_shows, client=None):
-    load_dotenv()
-    vectors_dict = get_vectors_dict()
+def main_func(liked_shows, openai_key, model_image_gen, pickele_path, client=None):
+    logging.debug(openai_key + " " + model_image_gen + " " + pickele_path)
+    vectors_dict = get_vectors_dict(pickele_path)
     vectors_dict_without_liked = {title : vector for title, vector in vectors_dict.items() if title not in liked_shows}
     
     liked_shows_vectors = [vectors_dict.get(show) for show in liked_shows]
@@ -181,9 +181,12 @@ def main_func(liked_shows, client=None):
     suggestions = get_top_similar_vectors(avg_vector=avg_vector, vectors_dict=vectors_dict_without_liked)
     recommended_shows = [title for title in suggestions]
     if client == None:
-        client = init_openAI_client(os.environ.get("OPENAI_API_KEY"))
+        client = init_openAI_client(openai_key)
+    # need to implement - check in new_shoes.pkl if already generated from same liked shows and recommended shows
     new_shows = create_new_shows(client, liked_shows, recommended_shows)
-    new_shows = create_new_shows_posters(client, new_shows, os.environ.get("MODEL_IMAGE_GEN"))
+    # for testing - uncomment the following line
+    # new_shows = [{"Title" : "Kingdoms and Bloodlines", "Description" : "somthing about the show", "URL" : "https://oaidalleapiprodscus.blob.core.windows.net/private/org-2CwskBzgGP5OnJE5rJP2GrIS/user-xPA8l8GEYMhBTtbf6jwfHEqa/img-0VUfIGKWTllYDWtbf8G1waCd.png?st=2024-01-26T21%3A42%3A02Z&se=2024-01-26T23%3A42%3A02Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2024-01-26T22%3A31%3A44Z&ske=2024-01-27T22%3A31%3A44Z&sks=b&skv=2021-08-06&sig=qaV07gg6FDKnvQKr85eQllN0AwRyTViQtjCzlOLaNjM%3D"}, {"Title" : "Shadows of Deception", "Description" : "In a small mysterious town, a group of seemingly ordinary individuals discover dark secrets hidden beneath the surface of their idyllic lives. As they delve deeper into the enigma, they unravel a web of intrigue and lies that connects them in unforeseen ways. Betrayal, deceit, and treacherous alliances become their daily reality as they struggle to uncover the truth and save those they hold dear. Will they succumb to the shadows of deception, or will they find the strength to fight for justice? Step into a world where nothing is as it seems, and trust is a luxury they can't afford..", "URL" : "https://oaidalleapiprodscus.blob.core.windows.net/private/org-2CwskBzgGP5OnJE5rJP2GrIS/user-xPA8l8GEYMhBTtbf6jwfHEqa/img-vOVbRUMYFblb7yi4DYk6mWh6.png?st=2024-01-26T21%3A42%3A14Z&se=2024-01-26T23%3A42%3A14Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2024-01-26T22%3A40%3A32Z&ske=2024-01-27T22%3A40%3A32Z&sks=b&skv=2021-08-06&sig=DiGv%2B5SkDVudKbgLen810ZVi5uGksc0GAHQcKhniTEM%3D"}]
+    new_shows = create_new_shows_posters(client, new_shows, model_image_gen) 
     return suggestions, new_shows
 
 

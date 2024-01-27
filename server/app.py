@@ -23,7 +23,7 @@ def prompt_liked_shows():
     session['state_manager_state'] = 1
     session['state_manager_data'] = None
     logging.debug(f"current state: {session['state_manager_state']}")
-    return jsonify({'message': get_liked_shows_message_for_client})
+    return jsonify({'reply': create_response_messages(get_liked_shows_message_for_client)})
 
     
 @app.route('/api/message', methods=['POST'])

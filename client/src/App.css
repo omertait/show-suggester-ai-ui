@@ -73,7 +73,17 @@
     margin-bottom: 10px;
     border-radius: 4px;
   }
-  
+
+  .error-message {
+    background-color: #e59494; 
+  }
+
+  .chat-image {
+    max-width: 100%;
+    height: auto;
+    margin: 10px 0;
+  }
+
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }

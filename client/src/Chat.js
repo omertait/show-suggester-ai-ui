@@ -10,8 +10,11 @@ const Chat = () => {
   useEffect(() => {
     axios.get('http://localhost:5000/api/prompt_liked_shows', { withCredentials: true })
       .then(response => {
-        const serverMessage = { text: response.data.message, source: 'server' };
-        setMessages([serverMessage]);
+        
+        const serverReply = response.data.reply[0];
+
+        setMessages([{ type: serverReply.type, content: serverReply.content, source: 'server' }]);
+
       })
       .catch(error => console.error('Error fetching prompt:', error));
   }, []);
@@ -21,7 +24,7 @@ const Chat = () => {
   };
 
   const handleSend = async () => {
-    const userMessage = { text: inputText, source: 'user' };
+    const userMessage = { type: 'text', content: inputText, source: 'user' };
     setMessages(messages => [...messages, userMessage]);
     setIsLoading(true);
     try {
@@ -31,7 +34,7 @@ const Chat = () => {
 
       // Iterate over each reply and add it to the messages
       serverReplies.forEach(reply => {
-        const replyMessage = { text: reply, source: 'server' };
+        const replyMessage = { type: reply.type, content: reply.content, source: 'server' };
         setMessages(messages => [...messages, replyMessage]);
     });
     } catch (error) {
@@ -46,9 +49,19 @@ const Chat = () => {
   return (
     <div className="chat-container">
       <div className="chat-display">
-        {messages.map((msg, index) => (
-          <div key={index} className={msg.source === 'user' ? 'user-message' : 'server-message'}>{msg.text}</div>
-        ))}
+      {messages.map((msg, index) => {
+        console.log(index);
+        let messageClass = msg.source === 'user' ? 'user-message' : 'server-message';
+        if (msg.type === 'error') {
+          messageClass += ' error-message'; 
+        }
+
+        return msg.type === 'text' || msg.type === 'error' ? (
+          <div key={index} className={messageClass}>{msg.content}</div>
+        ) : (
+          <img key={index} src={msg.content} className="chat-image" />
+        );
+      })}
         {isLoading && <div className="loading-animation"></div>} {/* Spinner */}
       </div>
       <div className="chat-input">

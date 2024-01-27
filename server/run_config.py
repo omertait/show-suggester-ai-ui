@@ -9,15 +9,25 @@ finished_message_for_client = ["Thank you for using our service. Hope you enjoye
 
 def output_messages(suggestions, new_shows):
     messages = []
-    messages.append("Here are the tv shows that i think you would love:")
+
+    # Text messages
+    messages.append({"type": "text", "content": "Here are the tv shows that I think you would love:"})
     for title in suggestions:
-        messages.append(f"{title} ({suggestions[title]}%)")
+        messages.append({"type": "text", "content": f"{title} ({suggestions[title]}%)"})
     
-    messages.append("I have also created just for you two shows which I think you would love.")
-    messages.append(f"Show #1 is based on the fact that you loved the input shows that you gave me.\nIts name is {new_shows[0]['Title']}\nand it is about {new_shows[0]['Description']}.\n\n")
-    messages.append(f"Show #2 is based on the shows that I recommended for you.\nIts name is {new_shows[1]['Title']}\nand it is about {new_shows[1]['Description']}.\n\n")
-    messages.append("Here are also the 2 tv show ads. Hope you like them!")
+    # new shows and their images
+    messages.append({"type": "text", "content": "I have also created just for you two shows which I think you would love."})
+    messages.append({"type": "text", "content": f"Show #1 is based on the fact that you loved the input shows that you gave me. Its name is {new_shows[0]['Title']} and it is about {new_shows[0]['Description']}.\n\n"})
+    messages.append({"type": "image", "content": new_shows[0]["URL"]}) 
+    messages.append({"type": "text", "content": f"Show #2 is based on the shows that I recommended for you. Its name is {new_shows[1]['Title']} and it is about {new_shows[1]['Description']}.\n\n"})
+    messages.append({"type": "image", "content": new_shows[1]["URL"]}) 
+    
+
     return messages
-    # for new_show in new_shows:
-    #     img = Image.open(requests.get(new_show["URL"], stream=True).raw)
-    #     img.show() 
+
+def create_response_messages(messages , type = "text"):
+    if isinstance(messages, str):
+        messages = [{"type": type, "content": messages}]
+    else:
+        messages = [{"type": type, "content": message} for message in messages]
+    return messages
