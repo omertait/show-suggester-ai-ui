@@ -1,26 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import './App.css';
 
 const Output = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [movies, setMovies] = useState([]); // This should be fetched from an API
   const [minMatchPercentage, setMinMatchPercentage] = useState(0);
+  
+  useEffect(() => {
+    const fetchShows = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/shows');
+        setMovies(response.data); // Assuming the response data is the array of shows
+      } catch (error) {
+        console.error('Error fetching new shows:', error);
+      }
+    };
+
+    fetchShows();
+  }, []);
 
   const exampleMovies = [
     {
-      title: "Inception",
+      Title: "Inception",
       matchPercentage: 98,
-      thumbnail: "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_.jpg"
+      Image: "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_.jpg"
     },
     {
-      title: "The Matrix",
+      Title: "The Matrix",
       matchPercentage: 95,
-      thumbnail: "https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_.jpg"
+      Image: "https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_.jpg"
     },
     {
-      title: "Interstellar",
+      Title: "Interstellar",
       matchPercentage: 93,
-      thumbnail: "https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_.jpg"
+      Image: "https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_.jpg"
     },
     // Add more movies as needed
   ];
@@ -37,8 +51,8 @@ const Output = () => {
     // Implement search logic or API call here
   };
 
-  const filteredMovies = exampleMovies.filter(movie => movie.matchPercentage >= minMatchPercentage);
-
+  const filteredMovies = movies.concat(exampleMovies).filter(movie => movie?.matchPercentage ? movie?.matchPercentage >= minMatchPercentage : movie);
+  
   return (
     <div className="app">
       <header className="app-header">
@@ -67,13 +81,23 @@ const Output = () => {
           {/* Recommendations logic goes here */}
         </div>
         <div className="movie-grid">
-          {filteredMovies.map((movie, index) => (
+          {/* {filteredMovies.map((movie, index) => (
             <div key={index} className="movie-card">
               <img src={movie.thumbnail} alt={movie.title} className="movie-thumbnail" />
               <div className="movie-info">
                 <h3>{movie.title}</h3>
                 <p>{movie.matchPercentage}% Match</p>
               </div>
+            </div>
+          ))} */
+          /*show.Description not in use currently*/
+          filteredMovies.map((movie, index) => (
+            <div key={index} className="movie-card">
+              <img src={movie.Image} alt={movie.Title} className="movie-thumbnail" />
+              <div className="movie-info">
+                <h3>{movie.Title}</h3>
+                {movie.matchPercentage ? <p>{movie.matchPercentage}% Match</p> : <p>New movie</p>}
+            </div>
             </div>
           ))}
         </div>

@@ -7,6 +7,29 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s', filename='logs.log')  
 
+def get_new_shows(end_point, image_dir):
+    if not os.path.exists(os.environ.get("NEW_SHOWS_PICKELE_PATH")):
+        return []
+    
+    try:
+        new_shows = pickle_load(os.environ.get("NEW_SHOWS_PICKELE_PATH"))
+    except (FileNotFoundError, EOFError, pickle.UnpicklingError):
+        return []
+    
+    shows = []
+    for key in new_shows:
+        
+            
+        if "Title" in new_shows[key] and "Description" in new_shows[key]:
+            show_data = {
+                'Title': new_shows[key]['Title'],
+                'Description': new_shows[key]['Description'],
+                'Image': url_for(end_point, filename=f"{image_dir}/{new_shows[key]["Title"]}.png", _external=True) 
+            }
+            shows.append(show_data)
+
+    return shows
+
 app = Flask(__name__)
 app.secret_key = 'alwlda13291@#12dknaw'
 CORS(app, supports_credentials=True)
@@ -47,6 +70,13 @@ def handle_message():
 
 
     return jsonify({'reply': reply})
+
+
+@app.route('/api/shows', methods=['GET'])
+def get_shows():
+    # Assuming you have a function to get new shows
+    new_shows = get_new_shows(end_point=os.environ.get("IMAGES_ENDPOINT"), image_dir=os.environ.get("IMAGES_DIR"))  # This should return a list of shows
+    return jsonify(new_shows)
 
 if __name__ == '__main__':
     app.run(debug=True)
