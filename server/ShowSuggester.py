@@ -1,3 +1,4 @@
+import base64
 import os
 import pickle
 import re
@@ -30,8 +31,9 @@ def get_dalle_response(client, prompt, model):
     response = client.images.generate(
         model=model,
         prompt=prompt,
+        response_format = "b64_json"
     )
-    return response.data[0].url
+    return response.data[0].b64_json
 
 def create_new_shows(client, liked_shows, recommended_shows):
     new_shows = []
@@ -57,7 +59,7 @@ def create_new_shows(client, liked_shows, recommended_shows):
             response_text = response.choices[0].message.content
             logger.debug(response_text)
             # check if the response is valid
-            match = re.search(r"Title: (.*?)\n?Description: (.*)", response_text)
+            match = re.search(r"Title: (.*?)\s*Description: (.*)", response_text, re.DOTALL)
             logger.debug(match)
             if match:
                 new_show_title, new_show_description = match.groups()
@@ -142,8 +144,12 @@ def get_liked_shows(title_choices, user_input):
 def create_new_shows_posters(client, new_shows, model="dall-e-2"):
     for index, new_show in enumerate(new_shows):
         prompt = f"tv show poster for {new_show['Title']}: {new_show['Description']}"   
-        new_show_image_url =  get_dalle_response(client, prompt, model)
-        new_shows[index]["URL"] = new_show_image_url
+        new_show_image_base64 =  get_dalle_response(client, prompt, model)
+        new_show_image_path = f"server/images/{new_show['Title']}.png"
+        # print(new_show_image_base64)
+        with open(new_show_image_path, "wb") as fh:
+            fh.write(base64.b64decode(new_show_image_base64))
+        new_shows[index]["IMAGE"] = new_show_image_path
         
     return new_shows
 ############## new function ##############

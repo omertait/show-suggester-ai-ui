@@ -18,9 +18,9 @@ def output_messages(suggestions, new_shows):
     # new shows and their images
     messages.append({"type": "text", "content": "I have also created just for you two shows which I think you would love."})
     messages.append({"type": "text", "content": f"Show #1 is based on the fact that you loved the input shows that you gave me. Its name is {new_shows[0]['Title']} and it is about {new_shows[0]['Description']}.\n\n"})
-    messages.append({"type": "image", "content": new_shows[0]["URL"]}) 
+    messages.append({"type": "image", "content": new_shows[0]["IMAGE"]}) 
     messages.append({"type": "text", "content": f"Show #2 is based on the shows that I recommended for you. Its name is {new_shows[1]['Title']} and it is about {new_shows[1]['Description']}.\n\n"})
-    messages.append({"type": "image", "content": new_shows[1]["URL"]}) 
+    messages.append({"type": "image", "content": new_shows[1]["IMAGE"]}) 
     
 
     return messages
