@@ -1,3 +1,6 @@
+from flask import url_for
+
+
 get_liked_shows_message_for_client = "Which TV shows did you love watching?\nSeparate them by a comma.\nMake sure to enter more than 1 show.\n"
 not_valid_input_message_for_client = "Please enter at least 2 shows separated by commas."
 def approve_liked_shows_message_for_client(shows_titles):
@@ -7,7 +10,7 @@ not_approved_message_for_client = "Sorry about that. Lets try again, please make
 # approved_message_for_client = "Great! I'll find you some shows you'll love."
 finished_message_for_client = ["Thank you for using our service. Hope you enjoyed it!", "refresh to start over."]
 
-def output_messages(suggestions, new_shows):
+def output_messages(suggestions, new_shows, end_point, image_dir):
     messages = []
 
     # Text messages
@@ -18,9 +21,9 @@ def output_messages(suggestions, new_shows):
     # new shows and their images
     messages.append({"type": "text", "content": "I have also created just for you two shows which I think you would love."})
     messages.append({"type": "text", "content": f"Show #1 is based on the fact that you loved the input shows that you gave me. Its name is {new_shows[0]['Title']} and it is about {new_shows[0]['Description']}.\n\n"})
-    messages.append({"type": "image", "content": new_shows[0]["IMAGE"]}) 
+    messages.append({"type": "image", "content": url_for(end_point, filename=f"{image_dir}/{new_shows[0]["Title"]}.png", _external=True)}) 
     messages.append({"type": "text", "content": f"Show #2 is based on the shows that I recommended for you. Its name is {new_shows[1]['Title']} and it is about {new_shows[1]['Description']}.\n\n"})
-    messages.append({"type": "image", "content": new_shows[1]["IMAGE"]}) 
+    messages.append({"type": "image", "content": url_for(end_point, filename=f"{image_dir}/{new_shows[1]["Title"]}.png", _external=True)}) 
     
 
     return messages

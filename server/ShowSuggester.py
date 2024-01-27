@@ -159,27 +159,34 @@ def get_liked_shows(title_choices, user_input):
 def create_new_shows_posters(client, key1, key2, new_shows, model="dall-e-2"):
 
     for index, new_show in enumerate(new_shows):
-        if "IMAGE" in new_show and new_show["IMAGE"]:
+        new_show_image_path = f"{os.environ.get("IMAGES_ENDPOINT")}/{os.environ.get("IMAGES_DIR")}/{new_show['Title']}.png"
+        if os.path.exists(new_show_image_path):
             continue
+        # if "IMAGE" in new_show and new_show["IMAGE"]:
+        #     continue
         prompt = f"tv show poster for {new_show['Title']}: {new_show['Description']}"   
         new_show_image_base64 =  get_dalle_response(client, prompt, model)
-        new_show_image_path = f"server/images/{new_show['Title']}.png"
-        
-        with open(new_show_image_path, "wb") as fh:
-            fh.write(base64.b64decode(new_show_image_base64))
-        new_shows[index]["IMAGE"] = new_show_image_path
+       
         try:
-            all_images = pickle_load(os.environ.get("NEW_SHOWS_PICKELE_PATH"))
-        except (FileNotFoundError, EOFError, pickle.UnpicklingError):
-            all_images = {}
-        key1, key2 = tuple(sorted(key1)), tuple(sorted(key2))
-        if all_images[key1]["Title"] ==  new_shows[index]["Title"]:
-            all_images[key1]["IMAGE"] = new_show_image_path
-        elif all_images[key2]["Title"] ==  new_shows[index]["Title"]:
-            all_images[key2]["IMAGE"] = new_show_image_path
-        else:
+            with open(new_show_image_path, "wb") as fh:
+                fh.write(base64.b64decode(new_show_image_base64))
+        except Exception as e:
             logging.error("error in saving image" + new_show_image_path)
-        pickle_save(all_images, os.environ.get("NEW_SHOWS_PICKELE_PATH"))
+            raise e
+        
+        # new_shows[index]["IMAGE"] = new_show_image_path
+        # try:
+        #     all_images = pickle_load(os.environ.get("NEW_SHOWS_PICKELE_PATH"))
+        # except (FileNotFoundError, EOFError, pickle.UnpicklingError):
+        #     all_images = {}
+        # key1, key2 = tuple(sorted(key1)), tuple(sorted(key2))
+        # if all_images[key1]["Title"] ==  new_shows[index]["Title"]:
+        #     all_images[key1]["IMAGE"] = new_show_image_path
+        # elif all_images[key2]["Title"] ==  new_shows[index]["Title"]:
+        #     all_images[key2]["IMAGE"] = new_show_image_path
+        # else:
+        #     logging.error("error in saving image" + new_show_image_path)
+        # pickle_save(all_images, os.environ.get("NEW_SHOWS_PICKELE_PATH"))
     return new_shows
 ############## new function ##############
 def get_vectors_dict():

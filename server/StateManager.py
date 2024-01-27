@@ -47,7 +47,7 @@ class StateManager:
         try:
             suggestions, new_shows = main_func(liked_shows=self.liked_shows)
             self.increment_state()
-            return output_messages(suggestions, new_shows)
+            return output_messages(suggestions, new_shows, os.environ.get("IMAGES_ENDPOINT"), os.environ.get("IMAGES_DIR"))
         except Exception as e:
             return create_response_messages('error in making suggestions: ' + str(e), type="error")
     
