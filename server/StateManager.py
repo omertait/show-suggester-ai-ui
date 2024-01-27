@@ -1,6 +1,5 @@
 from ShowSuggester import *
 from run_config import *
-from dotenv import load_dotenv
 
 class StateManager:
     
@@ -15,11 +14,11 @@ class StateManager:
         }
         self.current_state = current_state
         self.liked_shows = liked_shows or []
-        load_dotenv()
+        
     
     def handle_awaiting_shows(self, user_input):
         try:
-            title_choices = get_title_choices(get_vectors_dict(os.environ.get("PICKELE_PATH")))
+            title_choices = get_title_choices(get_vectors_dict())
             liked_shows_titles = get_liked_shows(user_input=user_input, title_choices=title_choices)
             if liked_shows_titles:
                 self.liked_shows = liked_shows_titles
@@ -46,7 +45,7 @@ class StateManager:
 
     def handle_making_suggestions(self, user_input):
         try:
-            suggestions, new_shows = main_func(liked_shows=self.liked_shows, pickele_path=os.environ.get("PICKELE_PATH"), openai_key=os.environ.get("OPENAI_API_KEY"), model_image_gen=os.environ.get("MODEL_IMAGE_GEN"))
+            suggestions, new_shows = main_func(liked_shows=self.liked_shows)
             self.increment_state()
             return output_messages(suggestions, new_shows)
         except Exception as e:

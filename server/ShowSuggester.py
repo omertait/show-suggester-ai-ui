@@ -9,7 +9,8 @@ import pandas as pd
 from fuzzywuzzy import process as fuzzy
 from PIL import Image
 import requests
-
+from dotenv import load_dotenv
+load_dotenv()
 
 logging.basicConfig(level= logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s', filename='logs.log')
 logger = logging.getLogger(__name__)
@@ -36,38 +37,52 @@ def get_dalle_response(client, prompt, model):
     return response.data[0].b64_json
 
 def create_new_shows(client, liked_shows, recommended_shows):
+    # Load existing data from cache
+    try:
+        all_shows = pickle_load(os.environ.get("NEW_SHOWS_PICKELE_PATH"))
+    except (FileNotFoundError, EOFError, pickle.UnpicklingError):
+        all_shows = {}
+
     new_shows = []
     for shows in [liked_shows, recommended_shows]:
-        prompt = f'''made up a new tv show.
-        the new tv show sould be similar to the following tv shows: {','.join(shows)}.
-        output ONLY tv show title , tv show description .
-        the description should be one paragraph max and should not contain the names of the tv shows provided.
-        the output format should be exactly:
-        Title: show title
-        Description : show description
-        '''
-        messages = [
-        {
-            "role":"user",
-            "content": prompt
-        }]
-        response = client.chat.completions.create(
-                        messages=messages,
-                        model="gpt-3.5-turbo",
-                    )
-        try:
-            response_text = response.choices[0].message.content
-            logger.debug(response_text)
-            # check if the response is valid
-            match = re.search(r"Title: (.*?)\s*Description: (.*)", response_text, re.DOTALL)
-            logger.debug(match)
-            if match:
-                new_show_title, new_show_description = match.groups()
-                new_shows.append({"Title" : new_show_title.strip(), "Description" : new_show_description.strip()})
-            else:
-                raise Exception("error generating new show")
-        except Exception as e:
-            raise e
+        key = tuple(sorted(shows))
+        if key in all_shows:
+            # Use cached data
+            new_shows.append(all_shows[key])
+        else:
+            prompt = f'''made up a new tv show.
+            the new tv show sould be similar to the following tv shows: {','.join(shows)}.
+            output ONLY tv show title , tv show description .
+            the description should be one paragraph max and should not contain the names of the tv shows provided.
+            the output format should be exactly:
+            Title: show title
+            Description : show description
+            '''
+            messages = [
+            {
+                "role":"user",
+                "content": prompt
+            }]
+            response = client.chat.completions.create(
+                            messages=messages,
+                            model="gpt-3.5-turbo",
+                        )
+            try:
+                response_text = response.choices[0].message.content
+                logger.debug(response_text)
+                # check if the response is valid
+                match = re.search(r"Title: (.*?)\s*Description: (.*)", response_text, re.DOTALL)
+                logger.debug(match)
+                if match:
+                    new_show_title, new_show_description = match.groups()
+                    new_show_info = {"Title" : new_show_title.strip(), "Description" : new_show_description.strip()}
+                    new_shows.append(new_show_info)
+                    all_shows[key] = new_show_info
+                else:
+                    raise Exception("error generating new show")
+            except Exception as e:
+                raise e
+    pickle_save(all_shows, os.environ.get("NEW_SHOWS_PICKELE_PATH"))
     return new_shows
 
 def csv_to_df(path, columns):
@@ -141,30 +156,45 @@ def get_liked_shows(title_choices, user_input):
         return liked_shows
     return None
 
-def create_new_shows_posters(client, new_shows, model="dall-e-2"):
+def create_new_shows_posters(client, key1, key2, new_shows, model="dall-e-2"):
+
     for index, new_show in enumerate(new_shows):
+        if "IMAGE" in new_show and new_show["IMAGE"]:
+            continue
         prompt = f"tv show poster for {new_show['Title']}: {new_show['Description']}"   
         new_show_image_base64 =  get_dalle_response(client, prompt, model)
         new_show_image_path = f"server/images/{new_show['Title']}.png"
-        # print(new_show_image_base64)
+        
         with open(new_show_image_path, "wb") as fh:
             fh.write(base64.b64decode(new_show_image_base64))
         new_shows[index]["IMAGE"] = new_show_image_path
-        
+        try:
+            all_images = pickle_load(os.environ.get("NEW_SHOWS_PICKELE_PATH"))
+        except (FileNotFoundError, EOFError, pickle.UnpicklingError):
+            all_images = {}
+        key1, key2 = tuple(sorted(key1)), tuple(sorted(key2))
+        if all_images[key1]["Title"] ==  new_shows[index]["Title"]:
+            all_images[key1]["IMAGE"] = new_show_image_path
+        elif all_images[key2]["Title"] ==  new_shows[index]["Title"]:
+            all_images[key2]["IMAGE"] = new_show_image_path
+        else:
+            logging.error("error in saving image" + new_show_image_path)
+        pickle_save(all_images, os.environ.get("NEW_SHOWS_PICKELE_PATH"))
     return new_shows
 ############## new function ##############
-def get_vectors_dict(pickele_path):
+def get_vectors_dict():
     try:
-        if not os.path.exists(os.environ.get("PICKELE_PATH")):
+        vectors_dict_path = os.environ.get("VECTORS_PICKELE_PATH")
+        if not os.path.exists(vectors_dict_path):
             logger.error("pkl not found, generating embeddings")
             raise Exception("pkl not found, generating embeddings")
             client = init_openAI_client(os.environ.get("OPENAI_API_KEY"))
             embedding_model = os.environ.get("MODEL_EMBEDDING")
             shows_df = csv_to_df(os.environ.get("SHOWS_CSV_PATH"), ["Title", "Description"])
             vectors_dict = generate_vectors(client, embedding_model, shows_df)
-            pickle_save(vectors_dict, os.environ.get("PICKELE_PATH"))
+            pickle_save(vectors_dict, vectors_dict_path)
         else:
-            vectors_dict = pickle_load(pickele_path)
+            vectors_dict = pickle_load(vectors_dict_path)
         return vectors_dict
     except Exception as e:
         raise e
@@ -176,9 +206,8 @@ def get_title_choices(vectors_dict):
     except Exception as e:
         raise e
 ############## new function ##############
-def main_func(liked_shows, openai_key, model_image_gen, pickele_path, client=None):
-    logging.debug(openai_key + " " + model_image_gen + " " + pickele_path)
-    vectors_dict = get_vectors_dict(pickele_path)
+def main_func(liked_shows, client=None):
+    vectors_dict = get_vectors_dict()
     vectors_dict_without_liked = {title : vector for title, vector in vectors_dict.items() if title not in liked_shows}
     
     liked_shows_vectors = [vectors_dict.get(show) for show in liked_shows]
@@ -187,12 +216,10 @@ def main_func(liked_shows, openai_key, model_image_gen, pickele_path, client=Non
     suggestions = get_top_similar_vectors(avg_vector=avg_vector, vectors_dict=vectors_dict_without_liked)
     recommended_shows = [title for title in suggestions]
     if client == None:
-        client = init_openAI_client(openai_key)
+        client = init_openAI_client(os.environ.get("OPENAI_API_KEY"))
     # need to implement - check in new_shoes.pkl if already generated from same liked shows and recommended shows
     new_shows = create_new_shows(client, liked_shows, recommended_shows)
-    # for testing - uncomment the following line
-    # new_shows = [{"Title" : "Kingdoms and Bloodlines", "Description" : "somthing about the show", "URL" : "https://oaidalleapiprodscus.blob.core.windows.net/private/org-2CwskBzgGP5OnJE5rJP2GrIS/user-xPA8l8GEYMhBTtbf6jwfHEqa/img-0VUfIGKWTllYDWtbf8G1waCd.png?st=2024-01-26T21%3A42%3A02Z&se=2024-01-26T23%3A42%3A02Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2024-01-26T22%3A31%3A44Z&ske=2024-01-27T22%3A31%3A44Z&sks=b&skv=2021-08-06&sig=qaV07gg6FDKnvQKr85eQllN0AwRyTViQtjCzlOLaNjM%3D"}, {"Title" : "Shadows of Deception", "Description" : "In a small mysterious town, a group of seemingly ordinary individuals discover dark secrets hidden beneath the surface of their idyllic lives. As they delve deeper into the enigma, they unravel a web of intrigue and lies that connects them in unforeseen ways. Betrayal, deceit, and treacherous alliances become their daily reality as they struggle to uncover the truth and save those they hold dear. Will they succumb to the shadows of deception, or will they find the strength to fight for justice? Step into a world where nothing is as it seems, and trust is a luxury they can't afford..", "URL" : "https://oaidalleapiprodscus.blob.core.windows.net/private/org-2CwskBzgGP5OnJE5rJP2GrIS/user-xPA8l8GEYMhBTtbf6jwfHEqa/img-vOVbRUMYFblb7yi4DYk6mWh6.png?st=2024-01-26T21%3A42%3A14Z&se=2024-01-26T23%3A42%3A14Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2024-01-26T22%3A40%3A32Z&ske=2024-01-27T22%3A40%3A32Z&sks=b&skv=2021-08-06&sig=DiGv%2B5SkDVudKbgLen810ZVi5uGksc0GAHQcKhniTEM%3D"}]
-    new_shows = create_new_shows_posters(client, new_shows, model_image_gen) 
+    new_shows = create_new_shows_posters(client, key1=liked_shows, key2=recommended_shows, new_shows=new_shows, model=os.environ.get("MODEL_IMAGE_GEN")) 
     return suggestions, new_shows
 
 
