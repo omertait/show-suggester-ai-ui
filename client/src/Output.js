@@ -6,7 +6,8 @@ const Output = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [movies, setMovies] = useState([]); // This should be fetched from an API
   const [minMatchPercentage, setMinMatchPercentage] = useState(0);
-  
+  const [activeMovie, setActiveMovie] = useState(null);
+
   useEffect(() => {
     const fetchShows = async () => {
       try {
@@ -51,7 +52,7 @@ const Output = () => {
     // Implement search logic or API call here
   };
 
-  const filteredMovies = movies.concat(exampleMovies).filter(movie => movie?.matchPercentage ? movie?.matchPercentage >= minMatchPercentage : movie);
+  const filteredMovies = movies.filter(movie => movie?.matchPercentage ? movie?.matchPercentage >= minMatchPercentage : movie);
   
   return (
     <div className="app">
@@ -81,25 +82,30 @@ const Output = () => {
           {/* Recommendations logic goes here */}
         </div>
         <div className="movie-grid">
-          {/* {filteredMovies.map((movie, index) => (
-            <div key={index} className="movie-card">
-              <img src={movie.thumbnail} alt={movie.title} className="movie-thumbnail" />
-              <div className="movie-info">
-                <h3>{movie.title}</h3>
-                <p>{movie.matchPercentage}% Match</p>
-              </div>
-            </div>
-          ))} */
-          /*show.Description not in use currently*/
+          {
           filteredMovies.map((movie, index) => (
-            <div key={index} className="movie-card">
-              <img src={movie.Image} alt={movie.Title} className="movie-thumbnail" />
+            <div
+            key={index} 
+            className={`movie-card ${activeMovie === movie ? 'active' : ''}`}
+            
+            >
+              <img src={movie.Image} alt={movie.Title} className="movie-thumbnail" onClick={() => setActiveMovie(movie)}/>
               <div className="movie-info">
                 <h3>{movie.Title}</h3>
                 {movie.matchPercentage ? <p>{movie.matchPercentage}% Match</p> : <p>New movie</p>}
+                {activeMovie === movie && (
+                  <div className="movie-details">
+                    <p className="movie-description">{movie.Description}</p>
+                    <button className="close-btn" onClick={() => setActiveMovie(null)}>X</button>
+                  </div>
+                )}
+              </div>
+              
             </div>
-            </div>
+            
           ))}
+          
+          
         </div>
       </main>
     </div>
