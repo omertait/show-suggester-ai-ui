@@ -1,6 +1,4 @@
-import React,{ useState , useEffect} from 'react';
 import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
-import {server_path} from "./config"
 import Home from './Home';
 import Chat from './Chat';
 import Output from './Output';
@@ -24,13 +22,13 @@ const App = () => {
       <Router>
         <nav>
           <Link to="/">Home</Link>
-          <Link to="/chat">Chat</Link>
-          <Link to="/movies">Movies</Link>
+          <Link to="/Chat">Chat</Link>
+          <Link to="/Shows">Shows</Link>
         </nav>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/movies" element={<Output />} />
+          <Route path="/Chat" element={<Chat />} />
+          <Route path="/Shows" element={<Output />} />
         </Routes>
       </Router>
     );

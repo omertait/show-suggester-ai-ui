@@ -7,8 +7,6 @@ import numpy as np
 from openai import OpenAI
 import pandas as pd
 from fuzzywuzzy import process as fuzzy
-from PIL import Image
-import requests
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -45,7 +43,7 @@ def create_new_shows(client, liked_shows, recommended_shows):
 
     new_shows = []
     for shows in [liked_shows, recommended_shows]:
-        key = tuple(sorted(shows))
+        key = frozenset(shows)
         if key in all_shows:
             # Use cached data
             new_shows.append(all_shows[key])
@@ -135,14 +133,12 @@ def match_title(input, choices):
     logger.debug(f"{type(input)}, {type(choices)}")
     return fuzzy.extractOne(input, choices)[0]
 
-############## new function ##############
 def check_correct_titles(liked_shows, title_choices):
     shows_titles = []
     for liked_show in liked_shows:
         shows_titles.append(match_title(liked_show, title_choices))
     return shows_titles
 
-############## new function ##############
 
 def get_liked_shows(title_choices, user_input):
     liked_shows = []
@@ -174,21 +170,8 @@ def create_new_shows_posters(client, key1, key2, new_shows, model="dall-e-2"):
             logging.error("error in saving image" + new_show_image_path)
             raise e
         
-        # new_shows[index]["IMAGE"] = new_show_image_path
-        # try:
-        #     all_images = pickle_load(os.environ.get("NEW_SHOWS_PICKELE_PATH"))
-        # except (FileNotFoundError, EOFError, pickle.UnpicklingError):
-        #     all_images = {}
-        # key1, key2 = tuple(sorted(key1)), tuple(sorted(key2))
-        # if all_images[key1]["Title"] ==  new_shows[index]["Title"]:
-        #     all_images[key1]["IMAGE"] = new_show_image_path
-        # elif all_images[key2]["Title"] ==  new_shows[index]["Title"]:
-        #     all_images[key2]["IMAGE"] = new_show_image_path
-        # else:
-        #     logging.error("error in saving image" + new_show_image_path)
-        # pickle_save(all_images, os.environ.get("NEW_SHOWS_PICKELE_PATH"))
     return new_shows
-############## new function ##############
+
 def get_vectors_dict():
     try:
         vectors_dict_path = os.environ.get("VECTORS_PICKELE_PATH")
@@ -205,15 +188,15 @@ def get_vectors_dict():
         return vectors_dict
     except Exception as e:
         raise e
-############## new function ##############
+
 def get_title_choices(vectors_dict):
     try:
         title_choices = [show_title for show_title in vectors_dict.keys()]
         return title_choices
     except Exception as e:
         raise e
-############## new function ##############
-def main_func(liked_shows, client=None):
+
+def get_suggestions(liked_shows):
     vectors_dict = get_vectors_dict()
     vectors_dict_without_liked = {title : vector for title, vector in vectors_dict.items() if title not in liked_shows}
     
@@ -221,12 +204,17 @@ def main_func(liked_shows, client=None):
     
     avg_vector = get_avg_vector(liked_shows_vectors)
     suggestions = get_top_similar_vectors(avg_vector=avg_vector, vectors_dict=vectors_dict_without_liked)
+    
+    
+    return suggestions
+
+
+def get_new_shows(liked_shows, suggestions, client=None):
+
     recommended_shows = [title for title in suggestions]
     if client == None:
         client = init_openAI_client(os.environ.get("OPENAI_API_KEY"))
-    # need to implement - check in new_shoes.pkl if already generated from same liked shows and recommended shows
+    # need to implement - check in new_shows.pkl if already generated from same liked shows and recommended shows
     new_shows = create_new_shows(client, liked_shows, recommended_shows)
-    new_shows = create_new_shows_posters(client, key1=liked_shows, key2=recommended_shows, new_shows=new_shows, model=os.environ.get("MODEL_IMAGE_GEN")) 
-    return suggestions, new_shows
-
-
+    new_shows = create_new_shows_posters(client, key1=liked_shows, key2=recommended_shows, new_shows=new_shows, model=os.environ.get("MODEL_IMAGE_GEN"))
+    return new_shows 

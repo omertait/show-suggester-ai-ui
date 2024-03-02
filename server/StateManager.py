@@ -4,17 +4,21 @@ from run_config import *
 class StateManager:
     
 
-    def __init__(self, current_state, liked_shows=None):
+    def __init__(self, current_state, liked_shows=None, suggestions=None):
         self.state_functions = {
             1 : {'name' : 'AWAITING_SHOWS', 'handler' : self.handle_awaiting_shows},
             2 : {'name' : 'CONFIRMING_TITLES', 'handler' : self.handle_confirming_titles},
             3 : {'name' : 'MAKING SUGGESTIONS', 'handler' : self.handle_making_suggestions},
-            4 : {'name' : 'FINISHED', 'handler' : self.handle_finshed},
+            4 : {'name' : 'GENERATING NEW SHOWS', 'handler' : self.handle_generating_new_shows},
+            5 : {'name' : 'FINISHED', 'handler' : self.handle_finshed},
             # Add more states and functions as needed
         }
+        print("current_state: ", current_state)
+        print("liked_shows: ", liked_shows)
+        print("suggestions: ", suggestions)
         self.current_state = current_state
         self.liked_shows = liked_shows or []
-        
+        self.suggestions = suggestions or []
     
     def handle_awaiting_shows(self, user_input):
         try:
@@ -45,12 +49,28 @@ class StateManager:
 
     def handle_making_suggestions(self, user_input):
         try:
-            suggestions, new_shows = main_func(liked_shows=self.liked_shows)
+            suggestions = get_suggestions(liked_shows=self.liked_shows)
+            self.suggestions = suggestions
             self.increment_state()
-            return output_messages(suggestions, new_shows, os.environ.get("IMAGES_ENDPOINT"), os.environ.get("IMAGES_DIR"))
+            return suggestions_output_messages(suggestions)
         except Exception as e:
             return create_response_messages('error in making suggestions: ' + str(e), type="error")
-    
+        
+    def handle_generating_new_shows(self, user_input):
+        match user_input:
+            case "y":
+                try:
+                    new_shows = get_new_shows(liked_shows=self.liked_shows, suggestions=self.suggestions)
+                    self.increment_state()
+                    return new_shows_output_messages(new_shows, os.environ.get("IMAGES_ENDPOINT"), os.environ.get("IMAGES_DIR"))
+                except Exception as e:
+                    return create_response_messages('error in generating new shows: ' + str(e), type="error")
+            case "n":
+                self.increment_state()
+                return create_response_messages(finished_message_for_client)
+            case _:
+                return create_response_messages("please choose y/n")
+        
     def handle_finshed(self, user_input):
     
         return create_response_messages(finished_message_for_client)
@@ -77,4 +97,3 @@ class StateManager:
         else:
             raise ValueError("Invalid state")
     
-    # Optionally, methods to increment/decrement state if applicable
